@@ -2,7 +2,6 @@ import pygame as pg
 from numpy import format_float_scientific, sin,cos,pi
 import os
 import sys
-from constants import *
 
 
 
@@ -222,6 +221,9 @@ class Simulation:
                     if option2_rect.collidepoint(event.pos):
                         first = 0
                         self.menuD()
+                    if cancel_rect.collidepoint(event.pos):
+                        run = False
+                        sys.exit()
                     if save_rect.collidepoint(event.pos) and first:
                         self.menuS()
                     elif save_rect.collidepoint(event.pos) and first==0:
@@ -700,6 +702,9 @@ class Simulation:
                         self.theta1 = theta
                         self.phi1 = phi
                         self.run1()
+                    if cancel_rect.collidepoint(event.pos):
+                        run = False
+                        break
                     if double_rect.collidepoint(event.pos):
                         self.menu_of_two_pendulum()
                         
