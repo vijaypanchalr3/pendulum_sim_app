@@ -1,5 +1,5 @@
 import pygame as pg
-from numpy import format_float_scientific, sin,cos,pi
+from numpy import format_float_scientific, sin,cos,pi,sqrt
 import os
 import sys
 
@@ -29,10 +29,15 @@ class Pendulum:
         self.length = length
         self.w0 = gravity/length
         self.gamma = (length*dampcoef)/mass
+        self.T = ((sqrt(length/gravity))*(1+(0.25*(sin(0.5*theta))**2)+((9/64)*(sin(theta*0.5))**4)))*2*pi
+        self.W = (2*pi)/self.T
         self.theta = theta
         self.phi = phi
         self.color = color
-        self.h = 0.0250
+        self.mass = mass
+        self.gravity = gravity
+        self.E0 = 0.5*self.mass*phi*phi+self.mass*self.gravity*self.length*(1-cos(theta))
+        self.h = 0.0150
         self.image = load_image(image)
     def Auxilaryfun(self,theta,phi):
         return -(self.gamma*phi)-(self.w0*sin(theta))
@@ -53,6 +58,15 @@ class Pendulum:
         l_ = (1/6)*(l1+l4+2*(l2+l3))
         self.theta+=k_
         self.phi+=l_
+    def timeperiod(self):
+        return self.T,self.W
+    def energy(self):
+        T = 0.5*self.mass*self.length*self.length*self.phi*self.phi
+        V = self.mass*self.gravity*self.length*(1-cos(self.theta))
+        return T,V,T+V
+    def initial_E(self):
+        return self.E0
+        
 
     def draw(self,screen,origin):
         """
@@ -69,9 +83,14 @@ class PendulumAppro(Pendulum):
         super().__init__(length, mass, dampcoef, gravity, theta, phi,image=image,color=color)
 
     def Auxilaryfun(self, theta, phi):
-        return -((gammal)*phi)-(w0*theta)
-    
+        return -(self.gamma*phi)-(self.w0*theta)
 
+
+    
+    def timeperiod(self):
+        W = sqrt(self.gravity/self.length)
+        T = (2*pi)/W
+        return T,W
 
 
 class DoublePendulum:
@@ -92,6 +111,16 @@ class DoublePendulum:
         self.origin = (650,200)
         self.image = load_image("bitmap1.png")
         self.color = color
+        
+        
+        self.l1sq_m1_by2 = 0.5*self.mass1*self.length1**2
+        self.l1sq_m2_by2 = 0.5*self.mass2*self.length1**2
+        self.l2sq_m2_by2 = 0.5*self.mass2*self.length2**2
+        self.l1_l2_m2 = self.length1*self.length2*self.mass2
+        T = self.l1sq_m1_by2*self.phi1*self.phi1+self.l1sq_m2_by2*self.phi1*self.phi1+self.l2sq_m2_by2*self.phi2*self.phi2+self.l1_l2_m2*self.phi1*self.phi2*cos(self.theta1-self.theta2)
+        V = 2*self.mass1*self.length1*self.gravity+self.mass2*self.length2*self.gravity-(self.mass1+self.mass2)*self.gravity*self.length1*cos(self.theta1)-self.mass2*self.gravity*self.length2*cos(self.theta2)
+        self.E0 = T+V
+
 
     def oxillary1(self,theta1,theta2,phi1,phi2):
         diff = theta1-theta2
@@ -132,7 +161,13 @@ class DoublePendulum:
         self.theta2+=k_2
         self.phi1+=l_1
         self.phi2+=l_2
-        
+    def initial_energy(self):
+        return self.E0    
+    def energy(self):
+        T = self.l1sq_m1_by2*self.phi1*self.phi1+self.l1sq_m2_by2*self.phi1*self.phi1+self.l2sq_m2_by2*self.phi2*self.phi2+self.l1_l2_m2*self.phi1*self.phi2*cos(self.theta1-self.theta2)
+        V = 2*self.mass1*self.length1*self.gravity+self.mass2*self.length2*self.gravity-(self.mass1+self.mass2)*self.gravity*self.length1*cos(self.theta1)-self.mass2*self.gravity*self.length2*cos(self.theta2)
+        E = T+V
+        return T,V,E
 
     def draw(self,window):
         x1 = self.origin[0]+self.length1*cos((pi*1.5)-self.theta1)
@@ -150,18 +185,20 @@ class Simulation:
         pg.init()
         self.window = pg.display.set_mode((1360,720),pg.RESIZABLE)
         self.size =self.window.get_size()
-        self.ff=pg.font.Font("Lato-BoldItalic.ttf",28)
+        self.ff=pg.font.Font("Lato-BoldItalic.ttf",24)
         self.ff2=pg.font.Font("Lato-BoldItalic.ttf",32)
         
         color1 = "#FCE38A"
         color2 = "#C68B59"
         color3 = "#FBC687"
         color4 = "#402218"
+        color5 = "#BBBBBB"
         
         self.fg = color4
         self.bg = color1
         self.special = color3
         self.common = color2
+        self.extra = color5
 
         
         self.length1 = 200
@@ -178,7 +215,7 @@ class Simulation:
         self.gravityo = self.gravity
         self.theta1 = 0.550
         self.thetao1 = self.theta1
-        self.theta2 = 0.400
+        self.theta2 = 0.550
         self.thetao2 = self.theta2
         self.phi1 = 0.0
         self.phio1 = self.phi1
@@ -216,7 +253,10 @@ class Simulation:
         self.window.blit(text,(text_rect.x+10,text_rect.y+8))
         return text_rect
 
-        
+    def bar(self,x,y,initial_val,new_val):
+        pg.draw.rect(self.window,self.special,(x,y,300,15))
+        pg.draw.rect(self.window,self.common,(x,y,300*new_val/initial_val,15))
+
     def inputbox(self,text,input_text,x,y,maximum,activity,background,foreground,active_color,inactive_color,font):
         text = font.render(text,True,foreground,background)
         text_size = text.get_size()
@@ -245,17 +285,19 @@ class Simulation:
     def mainmenu(self):
         run = True
         clock = pg.time.Clock()
-        heading_rect = self.button_with_shadow("Welcome",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+        heading_rect = self.button_with_shadow("Welcome to C.M. simulation app",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
         # heading_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2-heading_size[0]//2,50,heading_size[0]+20,heading_size[1]+10),border_radius=5)
 
         exit_rect = self.button_with_shadow("exit",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
 
         option1 = self.ff2.render("Single pendulum",True,self.fg,self.special)
         option1_size = option1.get_size()
-        option1_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2-200-50,self.size[1]//2-250,200,200),border_radius=15)
+        option1_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2-200-50,self.size[1]//2-250,200,100),border_radius=15)
         option21 = self.ff2.render("Double pendulum",True,self.fg,self.special)
         option22 = self.ff2.render("(chaotic system)",True,self.fg,self.special)
-        option2_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2+50,self.size[1]//2-250,200,200),border_radius=15)
+        option2_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2-200-50,self.size[1]//2-250,200,100),border_radius=15)
+        option3 = self.ff2.render("Coupled pendulum",True,self.fg,self.special)
+        option3_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2+50,self.size[1]//2-250,200,100),border_radius=15)
         while run:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
@@ -275,21 +317,23 @@ class Simulation:
             self.window.fill(self.bg)
             self.size = self.window.get_size()
             
-            pg.draw.rect(self.window,self.common,(self.size[0]//2-300+5,self.size[1]//2-145,300,200),border_radius=15)
-            option1_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2-300,self.size[1]//2-150,300,200),border_radius=15)
+            pg.draw.rect(self.window,self.common,(self.size[0]//2-300+5,self.size[1]//2-145,300,150),border_radius=15)
+            option1_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2-300,self.size[1]//2-150,300,150),border_radius=15)
 
-            pg.draw.rect(self.window,self.common,(self.size[0]//2+55,self.size[1]//2-145,300,200),border_radius=15)
-            option2_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2+50,self.size[1]//2-150,300,200),border_radius=15)
-            
+            pg.draw.rect(self.window,self.common,(self.size[0]//2+55,self.size[1]//2-145,300,150),border_radius=15)
+            option2_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2+50,self.size[1]//2-150,300,150),border_radius=15)
 
-            heading_rect = self.button_with_shadow("Welcome to Simulation app",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+            pg.draw.rect(self.window,self.common,(self.size[0]//2-300+5,self.size[1]//2+55,300,150),border_radius=15)
+            option3_rect = pg.draw.rect(self.window,self.special,(self.size[0]//2-300,self.size[1]//2+50,300,150),border_radius=15)
+
+            heading_rect = self.button_with_shadow("Welcome to C.M. Simulation app",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
             exit_rect = self.button_with_shadow("exit",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
 
 
-            self.window.blit(option1,(option1_rect.x+35,option1_rect.y+80))
-            self.window.blit(option21,(option2_rect.x+35,option2_rect.y+50))
-            self.window.blit(option22,(option2_rect.x+40,option2_rect.y+100))
-
+            self.window.blit(option1,(option1_rect.x+35,option1_rect.y+50))
+            self.window.blit(option21,(option2_rect.x+35,option2_rect.y+30))
+            self.window.blit(option22,(option2_rect.x+40,option2_rect.y+70))
+            self.window.blit(option3,(option3_rect.x+25,option3_rect.y+50))
             pg.display.flip()
 
 
@@ -300,6 +344,12 @@ class Simulation:
         run = True
         clock = pg.time.Clock()
         self.size = self.window.get_size()
+
+        self.length1 = 200
+        self.length2 = 200
+        self.lengtho1 = 200
+        self.lengtho2 = 200
+        
 
         back_button = self.back_button(self.size)
         heading_rect = self.button_with_shadow("Menu for Double pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
@@ -325,8 +375,8 @@ class Simulation:
         pos2 = length2/10-1
         pos3 = (mass1-20)/20
         pos4 = (mass2-20)/20
-        pos5 = dampcoef*2
-        pos6 = gravity/100
+        # pos5 = dampcoef*2
+        pos5 = gravity/100
 
         active1 = False
         active2 = False
@@ -347,6 +397,8 @@ class Simulation:
         input_rect2 = self.inputbox("initial displacement 2 = ",input_text=str(user_text2),x=100,y=380,maximum=200,activity=active2,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
         input_rect3 = self.inputbox("initial angular velocity 1 = ",input_text=str(user_text3),x=100,y=430,maximum=200,activity=active3,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
         input_rect4 = self.inputbox("initial angular velocity 2 = ",input_text=str(user_text4),x=100,y=480,maximum=200,activity=active4,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+        one_pen_rect = self.button_with_shadow("one system",self.size[0]//2,self.size[1]-200,self.extra,self.fg,self.common,self.ff,shadow_distance=2)
+        two_pen_rect = self.button_with_shadow("two systems",self.size[0]//2+300,self.size[1]-200,self.special,self.fg,self.common,self.ff)
 
         
 
@@ -435,12 +487,14 @@ class Simulation:
                     if back_button.collidepoint(event.pos):
                         run = False
                         break
+                    if two_pen_rect.collidepoint(event.pos):
+                        self.menuD2()
                     if run_rect.collidepoint(event.pos):
                         self.length1 = length1
                         self.length2 = length2
                         self.mass1 = mass1
                         self.mass2 = mass2
-                        self.dampcoef = dampcoef
+                        # self.dampcoef = dampcoef
                         self.gravity = gravity
                         self.theta1 = theta1
                         self.theta2 = theta2
@@ -455,8 +509,8 @@ class Simulation:
                         pos2 = (self.lengtho2/10)-1
                         pos3 = (self.masso1-20)/20
                         pos4 = (self.masso2-20)/20
-                        pos5 = self.dampcoefo*2
-                        pos6 = self.gravityo/100
+                        # pos5 = self.dampcoefo*2
+                        pos5 = self.gravityo/100
                         user_text1 = str(self.thetao1)
                         user_text2 = str(self.thetao2)
                         user_text3 = str(self.phio1)
@@ -470,12 +524,14 @@ class Simulation:
             back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
+            one_pen_rect = self.button_with_shadow("one system",self.size[0]//2+100,self.size[1]-300,self.extra,self.fg,self.common,self.ff,shadow_distance=2)
+            two_pen_rect = self.button_with_shadow("two systems",self.size[0]//2+400,self.size[1]-300,self.special,self.fg,self.common,self.ff)
 
 
             
             # rectangle drawing
             
-            self.text_left("length 1=   "+str(round(length1)),100,170,self.bg,self.fg,self.ff)
+            self.text_left("length 1=   "+str(round(length1)),90,170,self.bg,self.fg,self.ff)
             pos1 = self.slider(self.size[0]//2-250,170+20,pos1)
             length1 = round((pos1*10)+10)
 
@@ -486,19 +542,19 @@ class Simulation:
 
             pos3 = self.slider(self.size[0]//2-250,220+20,pos3)
             mass1 = round(pos3*20+20)
-            self.text_left("mass 1=   "+str(round(mass1)),100,220,self.bg,self.fg,self.ff)
+            self.text_left("mass 1=   "+str(round(mass1)),90,220,self.bg,self.fg,self.ff)
 
             pos4 = self.slider(self.size[0]-250,220+20,pos4)
             mass2 = round(pos4*20+20)
             self.text_left("mass 2=   "+str(round(mass2)),self.size[0]//2,220,self.bg,self.fg,self.ff)
 
-            pos5 = self.slider(self.size[0]//2-250,270+20,pos5)
-            dampcoef = round(pos5/200,3)
-            self.text_left("damp coeffciant =   "+str(dampcoef),100,270,self.bg,self.fg,self.ff)
+            # pos5 = self.slider(self.size[0]//2-250,270+20,pos5)
+            # dampcoef = round(pos5/200,3)
+            # self.text_left("damp coeffciant =   "+str(dampcoef),100,270,self.bg,self.fg,self.ff)
 
-            pos6 = self.slider(self.size[0]-250,270+20,pos6)
-            gravity = round(10*pos6)+882
-            self.text_left("gravity=   "+str(round(gravity)),self.size[0]//2,270,self.bg,self.fg,self.ff)
+            pos5 = self.slider(self.size[0]//2-250,270+20,pos5)
+            gravity = round(10*pos5)+882
+            self.text_left("gravity=   "+str(round(gravity)),90,270,self.bg,self.fg,self.ff)
 
             
             input_rect1 = self.inputbox("initial displacement 1= ",input_text=str(user_text1),x=100,y=330,maximum=200,activity=active1,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
@@ -509,19 +565,43 @@ class Simulation:
             
             pg.display.flip()
 
-
-
+    def menuD2(self):
+        run = True
+        clock = pg.time.Clock()
+        self.size = self.window.get_size()
+        back_button = self.back_button(self.size)
+        while run:
+            for event in pg.event.get():
+                if event.type==pg.QUIT:
+                    run = False
+                    break
+                if event.type==pg.MOUSEBUTTONDOWN:
+                    if back_button.collidepoint(event.pos):
+                        run = False
+                        break
+            
+            clock.tick(60)
+            self.window.fill(self.bg)
+            self.size =self.window.get_size()
+            self.text_left("under construction, well don't want to do it, bored ;(",self.size[0]//2-400,self.size[1]//2,self.bg,self.fg,self.ff2)
+            back_button = self.back_button(self.size)
+            pg.display.flip()
     def menuS(self):
         run = True
         clock = pg.time.Clock()
         self.size = self.window.get_size()
-
+        
+        self.length1 = 500
+        self.length2 = 500
+        self.lengtho1 = 500
+        self.lengtho2 = 500
         back_button = self.back_button(self.size)
-        heading_rect = self.button_with_shadow("Menu for Double pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+        heading_rect = self.button_with_shadow("Menu for Simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
         back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
-
+        one_pen_rect = self.button_with_shadow("one pendulum system",self.size[0]//2-200,self.size[1]-200,self.extra,self.fg,self.common,self.ff,shadow_distance=2)
+        two_pen_rect = self.button_with_shadow("two pendulum system",self.size[0]//2+200,self.size[1]-200,self.special,self.fg,self.common,self.ff)
 
         length1 = self.length1
         mass1 = self.mass1
@@ -614,7 +694,10 @@ class Simulation:
                         pos4 = self.gravityo/100
                         user_text1 = str(self.thetao1)
                         user_text2 = str(self.phio1)
-
+                    if two_pen_rect.collidepoint(event.pos):
+                        self.menu_of_two_pendulum()
+                        run = False
+                        break
                 # all the keys and control. 
             # body
 
@@ -623,16 +706,17 @@ class Simulation:
             self.size = self.window.get_size()
 
             back_button = self.back_button(self.size)
-            heading_rect = self.button_with_shadow("Menu for Double pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+            heading_rect = self.button_with_shadow("Menu for simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
             back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
-
+            one_pen_rect = self.button_with_shadow("one pendulum system",self.size[0]//2-200,self.size[1]-200,self.extra,self.fg,self.common,self.ff,shadow_distance=3)
+            two_pen_rect = self.button_with_shadow("two pendulum system",self.size[0]//2+200,self.size[1]-200,self.special,self.fg,self.common,self.ff)
 
             
             # rectangle drawing
             
-            self.text_left("length =   "+str(round(length1)),100,170,self.bg,self.fg,self.ff)
+            self.text_left("length =   "+str(round(length1)),90,170,self.bg,self.fg,self.ff)
             pos1 = self.slider(self.size[0]//2-250,170+20,pos1)
             length1 = round((pos1*10)+10)
 
@@ -641,7 +725,7 @@ class Simulation:
             pos2 = self.slider(self.size[0]-250,170+20,pos2)
             mass1 = round(pos2*20+20)
 
-            self.text_left("damp coeffciant=   "+str(dampcoef),100,220,self.bg,self.fg,self.ff)
+            self.text_left("damp coeffciant=   "+str(dampcoef),90,220,self.bg,self.fg,self.ff)
             pos3 = self.slider(self.size[0]//2-250,220+20,pos3)
             dampcoef = round(pos3/200,3)
 
@@ -650,7 +734,7 @@ class Simulation:
             gravity = round(10*pos4)+882
 
             input_rect1 = self.inputbox("initial displacement= ",input_text=str(user_text1),x=100,y=330,maximum=200,activity=active1,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
-            input_rect3 = self.inputbox("initial angular velocity= ",input_text=str(user_text2),x=100,y=380,maximum=200,activity=active2,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect2 = self.inputbox("initial angular velocity= ",input_text=str(user_text2),x=100,y=380,maximum=200,activity=active2,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
 
             
 
@@ -661,20 +745,23 @@ class Simulation:
         run = True
         clock = pg.time.Clock()
         self.size = self.window.get_size()
-
+        
         back_button = self.back_button(self.size)
-        heading_rect = self.button_with_shadow("Menu for Double pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+        heading_rect = self.button_with_shadow("Menu for simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
         back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
-
+        exact_rect = self.button_with_shadow("exact solution",self.size[0]//2-200,self.size[1]-200,self.special,self.fg,self.common,self.ff)
+        appro_rect = self.button_with_shadow("appoximated solution",self.size[0]//2+200,self.size[1]-200,self.special,self.fg,self.common,self.ff)
 
         length1 = self.length1
         length2 = self.length2
         mass1 = self.mass1
         mass2 = self.mass2
-        dampcoef = self.dampcoef
-        gravity = self.gravity
+        dampcoef1 = self.dampcoef
+        dampcoef2 = self.dampcoef
+        gravity1 = self.gravity
+        gravity2 = self.gravity
         theta1 = self.theta1
         theta2 = self.theta2
         phi1 = self.phi1
@@ -685,8 +772,10 @@ class Simulation:
         pos2 = length2/10-1
         pos3 = (mass1-20)/20
         pos4 = (mass2-20)/20
-        pos5 = dampcoef*2
-        pos6 = gravity/100
+        pos5 = dampcoef1*2
+        pos6 = dampcoef2*2
+        pos7 = gravity1/100
+        pos8 = gravity2/100
 
 
         active1 = False
@@ -710,7 +799,7 @@ class Simulation:
         input_rect4 = self.inputbox("initial angular velocity 2 = ",input_text=str(user_text4),x=100,y=480,maximum=200,activity=active4,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
 
     
-
+        appro = True
         while run:
             for event in pg.event.get():
                 if event.type==pg.QUIT:
@@ -800,13 +889,18 @@ class Simulation:
                         self.length2 = length2
                         self.mass1 = mass1
                         self.mass2 = mass2
-                        self.dampcoef = dampcoef
-                        self.gravity = gravity
                         self.theta1 = theta1
                         self.theta2 = theta2
                         self.phi1 = phi1
                         self.phi2 = phi2
-                        self.runD1()
+                        if appro:
+                            self.run22(dampcoef1,dampcoef2,gravity1,gravity2)
+                        else:
+                            self.run21(dampcoef1,dampcoef2,gravity1,gravity2)
+                    if exact_rect.collidepoint(event.pos):
+                        appro=False
+                    if appro_rect.collidepoint(event.pos):
+                        appro=True
                     if back_rect.collidepoint(event.pos):
                         run = False
                         break
@@ -816,26 +910,32 @@ class Simulation:
                         pos3 = (self.masso1-20)/20
                         pos4 = (self.masso2-20)/20
                         pos5 = self.dampcoefo*2
-                        pos6 = self.gravityo/100
+                        pos6 = self.dampcoefo*2
+                        pos7 = self.gravityo/100
+                        pos8 = self.gravityo/100
                         user_text1 = str(self.thetao1)
                         user_text2 = str(self.thetao2)
                         user_text3 = str(self.phio1)
                         user_text4 = str(self.phio2)
-            clock.tick(120)
+            clock.tick(60)
             self.window.fill(self.bg)
             self.size = self.window.get_size()
 
             back_button = self.back_button(self.size)
-            heading_rect = self.button_with_shadow("Menu for Double pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+            heading_rect = self.button_with_shadow("Menu for simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
             back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
-
-
+            if appro:
+                exact_rect = self.button_with_shadow("exact solution",self.size[0]//2-200,self.size[1]-180,self.special,self.fg,self.common,self.ff)
+                appro_rect = self.button_with_shadow("appoximated solution",self.size[0]//2+200+3,self.size[1]-180+3,self.extra,self.fg,self.common,self.ff,shadow_distance = 3)
+            else:
+                exact_rect = self.button_with_shadow("exact solution",self.size[0]//2-200+3,self.size[1]-180+3,self.extra,self.fg,self.common,self.ff,shadow_distance=3)
+                appro_rect = self.button_with_shadow("appoximated solution",self.size[0]//2+200,self.size[1]-180,self.special,self.fg,self.common,self.ff)
             
             # rectangle drawing
             
-            self.text_left("length 1=   "+str(round(length1)),100,170,self.bg,self.fg,self.ff)
+            self.text_left("length 1=   "+str(round(length1)),90,170,self.bg,self.fg,self.ff)
             pos1 = self.slider(self.size[0]//2-250,170+20,pos1)
             length1 = round((pos1*10)+10)
 
@@ -846,81 +946,50 @@ class Simulation:
 
             pos3 = self.slider(self.size[0]//2-250,220+20,pos3)
             mass1 = round(pos3*20+20)
-            self.text_left("mass 1=   "+str(round(mass1)),100,220,self.bg,self.fg,self.ff)
+            self.text_left("mass 1=   "+str(round(mass1)),90,220,self.bg,self.fg,self.ff)
 
             pos4 = self.slider(self.size[0]-250,220+20,pos4)
             mass2 = round(pos4*20+20)
             self.text_left("mass 2=   "+str(round(mass2)),self.size[0]//2,220,self.bg,self.fg,self.ff)
 
             pos5 = self.slider(self.size[0]//2-250,270+20,pos5)
-            dampcoef = round(pos5/200,3)
-            self.text_left("damp coeffciant =   "+str(dampcoef),100,270,self.bg,self.fg,self.ff)
+            dampcoef1 = round(pos5/200,3)
+            self.text_left("damp coeffciant (1)=   "+str(dampcoef1),90,270,self.bg,self.fg,self.ff)
 
             pos6 = self.slider(self.size[0]-250,270+20,pos6)
-            gravity = round(10*pos6)+882
-            self.text_left("gravity=   "+str(round(gravity)),self.size[0]//2,270,self.bg,self.fg,self.ff)
+            dampcoef2 = round(pos6/200,3)
+            self.text_left("damp coeffciant (2)=   "+str(dampcoef2),self.size[0]//2,270,self.bg,self.fg,self.ff)
+    
+            pos7 = self.slider(self.size[0]//2-250,320+20,pos7)
+            gravity1 = round(10*pos7)+882
+            self.text_left("gravity (1)=   "+str(round(gravity1)),90,320,self.bg,self.fg,self.ff)
+
+            pos8 = self.slider(self.size[0]-250,320+20,pos8)
+            gravity2 = round(10*pos8)+882
+            self.text_left("gravity (2)=   "+str(round(gravity2)),self.size[0]//2,320,self.bg,self.fg,self.ff)
 
             
-            input_rect1 = self.inputbox("initial displacement 1= ",input_text=str(user_text1),x=100,y=330,maximum=200,activity=active1,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
-            input_rect2 = self.inputbox("initial displacement 2 = ",input_text=str(user_text2),x=100,y=380,maximum=200,activity=active2,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
-            input_rect3 = self.inputbox("initial angular velocity 1 = ",input_text=str(user_text3),x=100,y=430,maximum=200,activity=active3,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
-            input_rect4 = self.inputbox("initial angular velocity 2 = ",input_text=str(user_text4),x=100,y=480,maximum=200,activity=active4,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect1 = self.inputbox("initial displacement 1= ",input_text=str(user_text1),x=100,y=400,maximum=200,activity=active1,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect2 = self.inputbox("initial displacement 2 = ",input_text=str(user_text2),x=self.size[0]//2,y=400,maximum=200,activity=active2,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect3 = self.inputbox("initial angular velocity 1 = ",input_text=str(user_text3),x=100,y=450,maximum=200,activity=active3,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect4 = self.inputbox("initial angular velocity 2 = ",input_text=str(user_text4),x=self.size[0]//2,y=450,maximum=200,activity=active4,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
 
             
             pg.display.flip()
 
         
-        
+
     def run1(self):
         run = True
+        
         clock = pg.time.Clock()
         pen = Pendulum(self.length1,self.mass1,self.dampcoef,self.gravity,self.theta1,self.phi1,image="bitmap1.png")
-
-
-        menu_option = self.ff2.render("Menu",True,self.fg,self.special)
-        exit_option = self.ff2.render("Exit",True,self.fg,self.special)
-        length_option = self.ff.render("length = "+str(self.length1)+"cm",True,self.fg,self.bg)
-        mass_option = self.ff.render("mass = "+str(self.mass1)+"gm",True,self.fg,self.bg)
-        damping_option = self.ff.render("Damping Coeff = "+str(self.dampcoef)+"dyne s/cm",True,self.fg,self.bg)
-        
-        exit_option = self.ff2.render("Exit",True,self.fg,self.special)
-        menu_option_size = menu_option.get_size()
-        menu_option_rect = pg.draw.rect(self.window,self.special,(100,100,200,menu_option_size[1]+200))
-        exit_option_rect = pg.draw.rect(self.window,self.special,(100,200,200,menu_option_size[1]+20))
-        length_option_rect = pg.draw.rect(self.window,self.special,(100,400,menu_option_size[0]+50,menu_option_size[1]+20))
-        mass_option_rect = pg.draw.rect(self.window,self.special,(100,500,menu_option_size[0]+50,menu_option_size[1]+20))
-        damping_option_rect = pg.draw.rect(self.window,self.special,(100,600,menu_option_size[0]+50,menu_option_size[1]+20))
-        
-        while run:
-            for event in pg.event.get():
-                if event.type == pg.QUIT:
-                    run = False
-                    break
-                if event.type == pg.KEYDOWN:
-                    if event.key==pg.K_ESCAPE:
-                        run = False
-                        break
-            # main loop 
-            clock.tick(120)
-            self.window.fill(self.bg)
-            origin = (self.window.get_size()[0]//2,100)
-            pen.draw(self.window,origin)
-            pen.update()
-            pg.draw.rect(self.window,self.special,(100+5,100+5,200,menu_option_size[1]+20),border_radius=5)
-            self.window.blit(menu_option,menu_option_rect)
-            self.window.blit(exit_option,exit_option_rect)
-            self.window.blit(length_option,length_option_rect)
-            self.window.blit(mass_option,mass_option_rect)
-            self.window.blit(damping_option,damping_option_rect)
-            pg.display.flip()
-
-    def runD1(self):
-        run = True
-        clock = pg.time.Clock()
-        pen = DoublePendulum(self.mass1,self.mass2,self.length1,self.length2,self.dampcoef,self.gravity,self.theta1,self.theta2,self.phi1,self.phi2)
-        
+        E0 = pen.initial_E()
+        T,V,E = pen.energy()
+        E0 = max(E,E0)
+        # T = 2*pi*sqrt(self.length1/self.gravity)
         menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
-
+        TP,W = pen.timeperiod()
         while run:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
@@ -938,43 +1007,249 @@ class Simulation:
             clock.tick(120)
             self.window.fill(self.bg)
             origin = (self.window.get_size()[0]//2,100)
-            pen.draw(self.window)
-            pen.update()
-
+            
+            T,V,E = pen.energy()
             menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
-
-            self.text_left("length1= "+str(self.length1)+" cm",50,400,self.bg,self.fg,self.ff)
-            self.text_left("length2= "+str(self.length2)+" cm",50,450,self.bg,self.fg,self.ff)
-            self.text_left("mass1= "+str(self.mass1)+" gm",50,500,self.bg,self.fg,self.ff)
-            self.text_left("mass2= "+str(self.mass2)+" gm",50,550,self.bg,self.fg,self.ff)
+            self.text_left("length= "+str(self.length1)+" cm",50,300,self.bg,self.fg,self.ff)
+            self.text_left("mass= "+str(self.mass1)+" gm",50,350,self.bg,self.fg,self.ff)
+            self.text_left("time period= "+str(round(TP,4))+" s",50,400,self.bg,self.fg,self.ff)
+            self.text_left("angular frequency= "+str(round(W,4))+" rad/s",50,450,self.bg,self.fg,self.ff)
+            self.text_left("E= ",50,500,self.bg,self.fg,self.ff)
+            self.bar(300,515,E0,E)
+            self.text_left("T= ",50,550,self.bg,self.fg,self.ff)
+            self.bar(300,565,E0,T)
+            self.text_left("V= ",50,600,self.bg,self.fg,self.ff)
+            self.bar(300,615,E0,V)
+            
+            pen.draw(self.window,origin)
+            pen.update()
 
             pg.display.flip()
 
-    def run2(self,dampcoef1,dampcoef2,gravity1,gravity2):
+    
+
+
+
+    def run21(self,dampcoef1,dampcoef2,gravity1,gravity2):
         run = True
         clock = pg.time.Clock()
-        
-        pen1 = Pendulum(self.length1,self.mass1,dampcoef1,gravity1,self.theta1,self.phi1,color="#000000",image="bitmap1.png")
-        pen2 = PendulumAppro(self.length2,self.mass2,dampcoef2,gravity2,self.theta2,self.phi2,image="bitmap2.png",color="#333333")
-        length = "length"
-        mass = "mass"
-        dampcoeff = "damping"
+        pen1 = Pendulum(self.length1,self.mass1,dampcoef1,gravity1,self.theta1,self.phi1,image="bitmap1.png")
+        pen2 = Pendulum(self.length2,self.mass2,dampcoef2,gravity2,self.theta2,self.phi2,image="bitmap2.png")
+        T1,V1,E1 = pen1.energy()
+        T2,V2,E2 = pen2.energy()
+        E01 = pen1.initial_E()
+        E02 = pen2.initial_E()
+        E01 = max(E1,E01)
+        E02 = max(E2,E02)
+        # T = 2*pi*sqrt(self.length1/self.gravity)
+        menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
+        TP1,W1 = pen1.timeperiod()
+        TP2,W2 = pen2.timeperiod()
         while run:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     run = False
                     break
+                if event.type == pg.KEYDOWN:
+                    if event.key==pg.K_ESCAPE:
+                        run = False
+                        break
+                if event.type==pg.MOUSEBUTTONDOWN:
+                    if menu_button.collidepoint(event.pos):
+                        run = False
+                        break
             # main loop 
-            clock.tick(60)
+            clock.tick(120)
             self.window.fill(self.bg)
             origin = (self.window.get_size()[0]//2,100)
+            
+            T1,V1,E1 = pen1.energy()
+            T2,V2,E2 = pen2.energy()
+            menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
+            self.text_left("length= "+str(self.length1)+" cm",50,300,self.bg,self.fg,self.ff)
+            self.text_left("mass= "+str(self.mass1)+" gm",50,350,self.bg,self.fg,self.ff)
+            self.text_left("time period= "+str(round(TP1,4))+" s",50,400,self.bg,self.fg,self.ff)
+            self.text_left("angular frequency= "+str(round(W1,4))+" rad/s",50,450,self.bg,self.fg,self.ff)
+            self.text_left("E= ",50,500,self.bg,self.fg,self.ff)
+            self.bar(100,515,E01,E1)
+            self.text_left("T= ",50,550,self.bg,self.fg,self.ff)
+            self.bar(100,565,E01,T1)
+            self.text_left("V= ",50,600,self.bg,self.fg,self.ff)
+            self.bar(100,615,E01,V1)
+
+            self.text_left("length= "+str(self.length2)+" cm",self.size[0]-350,300,self.bg,self.fg,self.ff)
+            self.text_left("mass= "+str(self.mass2)+" gm",self.size[0]-350,350,self.bg,self.fg,self.ff)
+            self.text_left("time period= "+str(round(TP2,4))+" s",self.size[0]-350,400,self.bg,self.fg,self.ff)
+            self.text_left("angular frequency= "+str(round(W2,4))+" rad/s",self.size[0]-350,450,self.bg,self.fg,self.ff)
+            # self.text_left("total enetgy= ",self.size[0]-500,500,self.bg,self.fg,self.ff)
+            self.bar(self.size[0]-325,515,E02,E2)
+            # self.text_left("kinetic energy= ",self.size[0]-500,550,self.bg,self.fg,self.ff)
+            self.bar(self.size[0]-325,565,E02,T2)
+            # self.text_left("potential energy= ",self.size[0]-500,600,self.bg,self.fg,self.ff)
+            self.bar(self.size[0]-325,615,E02,V2)
             
             pen1.draw(self.window,origin)
             pen2.draw(self.window,origin)
             pen1.update()
             pen2.update()
+
             pg.display.flip()
-        pg.quit()
+        
+   
+    def run22(self,dampcoef1,dampcoef2,gravity1,gravity2):
+        run = True
+        clock = pg.time.Clock()
+        pen1 = Pendulum(self.length1,self.mass1,dampcoef1,gravity1,self.theta1,self.phi1,image="bitmap1.png")
+        pen2 = PendulumAppro(self.length2,self.mass2,dampcoef2,gravity2,self.theta2,self.phi2,image="bitmap2.png")
+        T1,V1,E1 = pen1.energy()
+        T2,V2,E2 = pen2.energy()
+        E01 = pen1.initial_E()
+        E02 = pen2.initial_E()
+        E01 = max(E1,E01)
+        E02 = max(E2,E02)
+        menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
+        TP1,W1 = pen1.timeperiod()
+        TP2,W2 = pen2.timeperiod()
+        while run:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    run = False
+                    break
+                if event.type == pg.KEYDOWN:
+                    if event.key==pg.K_ESCAPE:
+                        run = False
+                        break
+                if event.type==pg.MOUSEBUTTONDOWN:
+                    if menu_button.collidepoint(event.pos):
+                        run = False
+                        break
+            # main loop 
+            clock.tick(120)
+            self.window.fill(self.bg)
+            origin = (self.window.get_size()[0]//2,100)
+            
+            T1,V1,E1 = pen1.energy()
+            T2,V2,E2 = pen2.energy()
+            menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
+            self.text_left("length= "+str(self.length1)+" cm",50,500,self.bg,self.fg,self.ff)
+            self.text_left("mass= "+str(self.mass1)+" gm",50,550,self.bg,self.fg,self.ff)
+            self.text_left("time period= "+str(round(TP1,4))+" s",50,600,self.bg,self.fg,self.ff)
+            self.text_left("angular frequency= "+str(round(W1,4))+" rad/s",50,650,self.bg,self.fg,self.ff)
+            # self.text_left("E= ",50,500,self.bg,self.fg,self.ff)
+            # self.bar(100,515,E01,E1)
+            # self.text_left("T= ",50,550,self.bg,self.fg,self.ff)
+            # self.bar(100,565,E01,T1)
+            # self.text_left("V= ",50,600,self.bg,self.fg,self.ff)
+            # self.bar(100,615,E01,V1)
+
+            self.text_left("length= "+str(self.length2)+" cm",self.size[0]-350,500,self.bg,self.fg,self.ff)
+            self.text_left("mass= "+str(self.mass2)+" gm",self.size[0]-350,550,self.bg,self.fg,self.ff)
+            self.text_left("time period= "+str(round(TP2,4))+" s",self.size[0]-350,600,self.bg,self.fg,self.ff)
+            self.text_left("angular frequency= "+str(round(W2,4))+" rad/s",self.size[0]-350,650,self.bg,self.fg,self.ff)
+            # self.text_left("total enetgy= ",self.size[0]-500,500,self.bg,self.fg,self.ff)
+            # self.bar(self.size[0]-315,515,E02,E2)
+            # self.text_left("kinetic energy= ",self.size[0]-500,550,self.bg,self.fg,self.ff)
+            # self.bar(self.size[0]-315,565,E02,T2)
+            # self.text_left("potential energy= ",self.size[0]-500,600,self.bg,self.fg,self.ff)
+            # self.bar(self.size[0]-315,615,E02,V2)
+            
+            pen1.draw(self.window,origin)
+            pen2.draw(self.window,origin)
+            pen1.update()
+            pen2.update()
+
+            pg.display.flip()
+        
+
+    def runD1(self):
+        run = True
+        clock = pg.time.Clock()
+        pen = DoublePendulum(self.mass1,self.mass2,self.length1,self.length2,self.dampcoef,self.gravity,self.theta1,self.theta2,self.phi1,self.phi2)
+        
+        menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
+        T,V,E = pen.energy()
+        E0 = pen.initial_energy()
+        E0 = max(E,E0)
+        while run:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    run = False
+                    break
+                if event.type == pg.KEYDOWN:
+                    if event.key==pg.K_ESCAPE:
+                        run = False
+                        break
+                if event.type==pg.MOUSEBUTTONDOWN:
+                    if menu_button.collidepoint(event.pos):
+                        run = False
+                        break
+            # main loop 
+            clock.tick(120)
+            self.window.fill(self.bg)
+            origin = (self.window.get_size()[0]//2,100)
+            
+            menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
+            T,V,E = pen.energy()
+            self.text_left("length1= "+str(self.length1)+" cm",50,400,self.bg,self.fg,self.ff)
+            self.text_left("length2= "+str(self.length2)+" cm",50,450,self.bg,self.fg,self.ff)
+            self.text_left("mass1= "+str(self.mass1)+" gm",50,500,self.bg,self.fg,self.ff)
+            self.text_left("mass2= "+str(self.mass2)+" gm",50,550,self.bg,self.fg,self.ff)
+            self.text_left("E",self.size[0]-50,500,self.bg,self.fg,self.ff)
+            self.bar(self.size[0]-400,515,E0,E)
+            self.text_left("T ",self.size[0]-50,550,self.bg,self.fg,self.ff)
+            self.bar(self.size[0]-400,565,E0,T)
+            self.text_left("V ",self.size[0]-50,600,self.bg,self.fg,self.ff)
+            self.bar(self.size[0]-400,615,E0,V)
+            pen.draw(self.window)
+            pen.update()
+
+            pg.display.flip()
+
+    def runD2(self,theta11,theta21,phi11,phi21,theta12,theta22,phi12,phi22):
+        run = True
+        clock = pg.time.Clock()
+        pen1 = DoublePendulum(self.mass1,self.mass2,self.length1,self.length2,self.dampcoef,self.gravity,theta11,theta21,phi11,phi21)
+        pen2 = DoublePendulum(self.mass1,self.mass2,self.length1,self.length2,self.dampcoef,self.gravity,theta12,theta22,phi12,phi22) 
+        
+        menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
+        # T,V,E = pen1.energy()
+        # E0 = pen.initial_energy()
+        while run:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    run = False
+                    break
+                if event.type == pg.KEYDOWN:
+                    if event.key==pg.K_ESCAPE:
+                        run = False
+                        break
+                if event.type==pg.MOUSEBUTTONDOWN:
+                    if menu_button.collidepoint(event.pos):
+                        run = False
+                        break
+            # main loop 
+            clock.tick(60)
+            self.window.fill(self.bg)
+            origin = (self.window.get_size()[0]//2,100)
+            menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
+            # T,V,E = pen.energy()
+            self.text_left("length1= "+str(self.length1)+" cm",50,400,self.bg,self.fg,self.ff)
+            self.text_left("length2= "+str(self.length2)+" cm",50,450,self.bg,self.fg,self.ff)
+            self.text_left("mass1= "+str(self.mass1)+" gm",50,500,self.bg,self.fg,self.ff)
+            self.text_left("mass2= "+str(self.mass2)+" gm",50,550,self.bg,self.fg,self.ff)
+            # self.text_left("E= ",50,500,self.bg,self.fg,self.ff)
+            # self.bar(100,515,E0,E)
+            # self.text_left("T= ",50,550,self.bg,self.fg,self.ff)
+            # self.bar(100,565,E0,T)
+            # self.text_left("V= ",50,600,self.bg,self.fg,self.ff)
+            # self.bar(100,615,E0,V)
+            pen1.draw(self.window)
+            pen2.draw(self.window)
+            pen1.update()
+            pen2.update()
+
+            pg.display.flip()
+    
 
             
             
