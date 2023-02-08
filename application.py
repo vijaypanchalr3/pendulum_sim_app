@@ -185,6 +185,7 @@ class Simulation:
         pg.init()
         self.window = pg.display.set_mode((1360,720),pg.RESIZABLE)
         self.size =self.window.get_size()
+        pg.display.set_caption("Pendulum simulation")
         self.ff=pg.font.Font("Lato-BoldItalic.ttf",24)
         self.ff2=pg.font.Font("Lato-BoldItalic.ttf",32)
         
