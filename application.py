@@ -188,11 +188,11 @@ class Simulation:
         self.ff=pg.font.Font("Lato-BoldItalic.ttf",24)
         self.ff2=pg.font.Font("Lato-BoldItalic.ttf",32)
         
-        color1 = "#FCE38A"
-        color2 = "#C68B59"
-        color3 = "#FBC687"
-        color4 = "#402218"
-        color5 = "#BBBBBB"
+        color1 = "#FFF5E4"
+        color2 = "#EE6983"
+        color3 = "#FFC4C4"
+        color4 = "#111111"
+        color5 = "#FFC2A2"
         
         self.fg = color4
         self.bg = color1
@@ -352,7 +352,7 @@ class Simulation:
         
 
         back_button = self.back_button(self.size)
-        heading_rect = self.button_with_shadow("Menu for Double pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+        heading_rect = self.button_with_shadow("Double pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
         back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
@@ -520,7 +520,7 @@ class Simulation:
             self.size = self.window.get_size()
 
             back_button = self.back_button(self.size)
-            heading_rect = self.button_with_shadow("Menu for Double pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+            heading_rect = self.button_with_shadow("Double pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
             back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
@@ -596,7 +596,7 @@ class Simulation:
         self.lengtho1 = 500
         self.lengtho2 = 500
         back_button = self.back_button(self.size)
-        heading_rect = self.button_with_shadow("Menu for Simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+        heading_rect = self.button_with_shadow("Simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
         back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
@@ -706,7 +706,7 @@ class Simulation:
             self.size = self.window.get_size()
 
             back_button = self.back_button(self.size)
-            heading_rect = self.button_with_shadow("Menu for simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+            heading_rect = self.button_with_shadow("Simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
             back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
@@ -727,7 +727,7 @@ class Simulation:
 
             self.text_left("damp coeffciant=   "+str(dampcoef),90,220,self.bg,self.fg,self.ff)
             pos3 = self.slider(self.size[0]//2-250,220+20,pos3)
-            dampcoef = round(pos3/200,3)
+            dampcoef = round(pos3/200,6)
 
             self.text_left("gravity=   "+str(round(gravity)),self.size[0]//2,220,self.bg,self.fg,self.ff)
             pos4 = self.slider(self.size[0]-250,220+20,pos4)
@@ -747,7 +747,7 @@ class Simulation:
         self.size = self.window.get_size()
         
         back_button = self.back_button(self.size)
-        heading_rect = self.button_with_shadow("Menu for simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+        heading_rect = self.button_with_shadow("Simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
         back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
         run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
@@ -922,7 +922,7 @@ class Simulation:
             self.size = self.window.get_size()
 
             back_button = self.back_button(self.size)
-            heading_rect = self.button_with_shadow("Menu for simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+            heading_rect = self.button_with_shadow("Simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
             back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
             run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
