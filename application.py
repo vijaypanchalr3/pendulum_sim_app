@@ -5,7 +5,7 @@ import sys
 
 
 
-def load_image(image, scale=1):
+def load_image(image):
     fullname = os.path.join("./", image)
     image = pg.image.load(fullname).convert()
     image.set_colorkey((255, 255, 255), pg.RLEACCEL)
