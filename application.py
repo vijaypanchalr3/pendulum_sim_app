@@ -7,13 +7,9 @@ import sys
 
 def load_image(image, scale=1):
     fullname = os.path.join("./", image)
-    image = pg.image.load(fullname)
-
-    # size = image.get_size()
-    # size = (size[0] * scale, size[1] * scale)
-    # image = pg.transform.scale(image, size)
-    # image = image.convert()
-    
+    image = pg.image.load(fullname).convert()
+    image.set_colorkey((255, 255, 255), pg.RLEACCEL)
+    image = pg.transform.scale(image, (20, 20))
     return image
 
 def resource_path(relative_path):
@@ -225,14 +221,16 @@ class Simulation:
     def slider(self,x,y,pos):
         cursor = pg.mouse.get_pos()
         clicked_pos = pg.mouse.get_pressed()
+        # active = false
         pg.draw.rect(self.window,self.common,(x,y,200,2))
-        pg.draw.rect(self.window,self.common,(pos+x-5,y-15,10,30))
+        pg.draw.circle(self.window,self.special,(pos+x-5,y),15)
         if x+200>cursor[0]>=x and y+25>=cursor[1]>=y-25:
             if clicked_pos[0]==1:
-                pg.draw.rect(self.window,self.special,(pos+x-5,y-15,10,30))
+                pg.draw.circle(self.window,self.extra,(pos+x-5,y),15)
                 pos = cursor[0]-x
-
         return pos
+    def Heading1(self,text):
+        print("when have time")
 
     def button_with_shadow(self,text,x,y,background,foreground,shadow_color,font,border_radius=5,shadow_distance=5):
         text = font.render(text,True,foreground,background)
@@ -249,9 +247,10 @@ class Simulation:
         self.window.blit(text,(text_rect.x+10,text_rect.y+5))
 
     def back_button(self,size):
-        text = self.ff2.render("X",True,self.fg,self.common)
-        text_rect = pg.draw.rect(self.window,self.common,(size[0]-100,100,50,50),border_radius=5)
-        self.window.blit(text,(text_rect.x+10,text_rect.y+8))
+        # text = self.ff2.render("X",True,self.fg,self.common)
+        # self.window.blit(text,(text_rect.x+10,text_rect.y+8))
+        text_rect = pg.draw.rect(self.window,self.common,(size[0]-80,40,40,40),border_radius=5)
+        pg.draw.circle(self.window,self.bg,(text_rect.x+20,text_rect.y+20),15,5)
         return text_rect
 
     def bar(self,x,y,initial_val,new_val):
@@ -512,10 +511,14 @@ class Simulation:
                         pos4 = (self.masso2-20)/20
                         # pos5 = self.dampcoefo*2
                         pos5 = self.gravityo/100
-                        user_text1 = str(self.thetao1)
-                        user_text2 = str(self.thetao2)
-                        user_text3 = str(self.phio1)
-                        user_text4 = str(self.phio2)
+                        theta1 = self.thetao1
+                        theta2 = self.thetao2
+                        phi1 = self.phio1
+                        phi2 = self.phio2
+                        user_text1 = str(theta1)
+                        user_text2 = str(theta2)
+                        user_text3 = str(phi1)
+                        user_text4 = str(phi2)
             clock.tick(120)
             self.window.fill(self.bg)
             self.size = self.window.get_size()
@@ -693,6 +696,8 @@ class Simulation:
                         pos2 = (self.masso1-20)/20
                         pos3 = self.dampcoefo*2
                         pos4 = self.gravityo/100
+                        theta1 = self.thetao1
+                        phi1 = self.phio1
                         user_text1 = str(self.thetao1)
                         user_text2 = str(self.phio1)
                     if two_pen_rect.collidepoint(event.pos):
@@ -914,10 +919,15 @@ class Simulation:
                         pos6 = self.dampcoefo*2
                         pos7 = self.gravityo/100
                         pos8 = self.gravityo/100
-                        user_text1 = str(self.thetao1)
-                        user_text2 = str(self.thetao2)
-                        user_text3 = str(self.phio1)
-                        user_text4 = str(self.phio2)
+                        
+                        theta1 = self.thetao1
+                        theta2 = self.thetao2
+                        phi1 = self.phio1
+                        phi2 = self.phio2
+                        user_text1 = str(theta1)
+                        user_text2 = str(theta2)
+                        user_text3 = str(phi1)
+                        user_text4 = str(phi2)
             clock.tick(60)
             self.window.fill(self.bg)
             self.size = self.window.get_size()
@@ -1042,6 +1052,8 @@ class Simulation:
         E02 = pen2.initial_E()
         E01 = max(E1,E01)
         E02 = max(E2,E02)
+        image1 = load_image("bitmap1.png")
+        image2 = load_image("bitmap2.png")
         # T = 2*pi*sqrt(self.length1/self.gravity)
         menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
         TP1,W1 = pen1.timeperiod()
@@ -1071,6 +1083,11 @@ class Simulation:
             self.text_left("mass= "+str(self.mass1)+" gm",50,350,self.bg,self.fg,self.ff)
             self.text_left("time period= "+str(round(TP1,4))+" s",50,400,self.bg,self.fg,self.ff)
             self.text_left("angular frequency= "+str(round(W1,4))+" rad/s",50,450,self.bg,self.fg,self.ff)
+
+            self.window.blit(image1,(self.size[0]-345,212))
+            self.window.blit(image2,(self.size[0]-345,262))
+            self.text_left("pendulum 1",self.size[0]-325,200,self.bg,self.fg,self.ff)
+            self.text_left("pendulum 2",self.size[0]-325,250,self.bg,self.fg,self.ff)
             self.text_left("E= ",50,500,self.bg,self.fg,self.ff)
             self.bar(100,515,E01,E1)
             self.text_left("T= ",50,550,self.bg,self.fg,self.ff)
@@ -1111,6 +1128,8 @@ class Simulation:
         menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
         TP1,W1 = pen1.timeperiod()
         TP2,W2 = pen2.timeperiod()
+        image1 = load_image("bitmap1.png")
+        image2 = load_image("bitmap2.png")
         while run:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
@@ -1136,6 +1155,11 @@ class Simulation:
             self.text_left("mass= "+str(self.mass1)+" gm",50,550,self.bg,self.fg,self.ff)
             self.text_left("time period= "+str(round(TP1,4))+" s",50,600,self.bg,self.fg,self.ff)
             self.text_left("angular frequency= "+str(round(W1,4))+" rad/s",50,650,self.bg,self.fg,self.ff)
+
+            self.window.blit(image1,(self.size[0]-345,212))
+            self.window.blit(image2,(self.size[0]-345,262))
+            self.text_left("exact solution",self.size[0]-325,200,self.bg,self.fg,self.ff)
+            self.text_left("approximated solution",self.size[0]-325,250,self.bg,self.fg,self.ff)
             # self.text_left("E= ",50,500,self.bg,self.fg,self.ff)
             # self.bar(100,515,E01,E1)
             # self.text_left("T= ",50,550,self.bg,self.fg,self.ff)
