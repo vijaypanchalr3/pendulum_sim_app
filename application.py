@@ -7,9 +7,10 @@ import sys
 
 def load_image(image):
     fullname = os.path.join("./", image)
-    image = pg.image.load(fullname).convert()
-    image.set_colorkey((255, 255, 255), pg.RLEACCEL)
-    image = pg.transform.scale(image, (20, 20))
+    image = pg.image.load(fullname)
+    # image = pg.image.load(fullname).convert()
+    # image.set_colorkey((255, 255, 255), pg.RLEACCEL)
+    # image = pg.transform.scale(image, (20, 20))
     return image
 
 def resource_path(relative_path):
@@ -93,7 +94,7 @@ class DoublePendulum:
     """
 
     """
-    def __init__(self,mass1,mass2,length1,length2,dampcoef,gravity,theta1,theta2,phi1,phi2,color="#000000"):
+    def __init__(self,mass1,mass2,length1,length2,dampcoef,gravity,theta1,theta2,phi1,phi2,image="bitmap1.png",color="#000000"):
         self.mass1 = mass1
         self.mass2 = mass2
         self.length1 = length1
@@ -175,49 +176,20 @@ class DoublePendulum:
         window.blit(self.image,(x1-10,y1-10))
         window.blit(self.image,(x2-10,y2-10))
 
-
-class Simulation:
+class theme:
     def __init__(self):
-        pg.init()
-        self.window = pg.display.set_mode((1360,720),pg.RESIZABLE)
-        self.size =self.window.get_size()
-        pg.display.set_caption("Pendulum simulation")
-        self.ff=pg.font.Font("Lato-BoldItalic.ttf",24)
-        self.ff2=pg.font.Font("Lato-BoldItalic.ttf",32)
-        
         color1 = "#FFF5E4"
         color2 = "#EE6983"
         color3 = "#FFC4C4"
         color4 = "#111111"
         color5 = "#FFC2A2"
-        
+        self.ff=pg.font.Font("Lato-BoldItalic.ttf",24)
+        self.ff2=pg.font.Font("Lato-BoldItalic.ttf",32)
         self.fg = color4
         self.bg = color1
         self.special = color3
         self.common = color2
         self.extra = color5
-
-        
-        self.length1 = 200
-        self.lengtho1 = self.length1
-        self.length2 = 200
-        self.lengtho2 = self.length2
-        self.mass1 = 100
-        self.masso1 = self.mass1
-        self.mass2 = 100
-        self.masso2 = self.mass2
-        self.dampcoef = 0.0
-        self.dampcoefo =self.dampcoef
-        self.gravity = 980
-        self.gravityo = self.gravity
-        self.theta1 = 0.550
-        self.thetao1 = self.theta1
-        self.theta2 = 0.550
-        self.thetao2 = self.theta2
-        self.phi1 = 0.0
-        self.phio1 = self.phi1
-        self.phi2 = 0.0
-        self.phio2 = self.phi2
     def slider(self,x,y,pos):
         cursor = pg.mouse.get_pos()
         clicked_pos = pg.mouse.get_pressed()
@@ -229,14 +201,25 @@ class Simulation:
                 pg.draw.circle(self.window,self.extra,(pos+x-5,y),15)
                 pos = cursor[0]-x
         return pos
-    def Heading1(self,text):
-        print("when have time")
-
-    def button_with_shadow(self,text,x,y,background,foreground,shadow_color,font,border_radius=5,shadow_distance=5):
-        text = font.render(text,True,foreground,background)
+    def Heading1(self,title_text,x,y,foreground):
+        text = self.ff2.render(title_text,True,foreground,self.bg)
         text_size = text.get_size()
+        text_rect = pg.draw.rect(self.window,self.bg,(x-text_size[0]//2,y-text_size[1]//2,text_size[0]+20,text_size[1]+10),border_radius=border_radius)
+        self.window.blit(text,(text_rect.x+10,text_rect.y+5))
+
+    def button_with_shadow(self,button_text,x,y,background,foreground,shadow_color,font,hover_color="#ffffff",border_radius=5,shadow_distance=5):
+        hover_color=self.extra
+        text = font.render(button_text,True,foreground,background)
+        text_size = text.get_size()
+        text_rect = pg.Rect(x-text_size[0]//2,y-text_size[1]//2,text_size[0]+20,text_size[1]+10)
+        # text_rect = pg.draw.rect(self.window,background,(x-text_size[0]//2,y-text_size[1]//2,text_size[0]+20,text_size[1]+10),border_radius=border_radius)
+        cursor = pg.mouse.get_pos()
         pg.draw.rect(self.window,shadow_color,(x-text_size[0]//2+shadow_distance,y-text_size[1]//2+shadow_distance,text_size[0]+20,text_size[1]+10),border_radius=border_radius)
-        text_rect = pg.draw.rect(self.window,background,(x-text_size[0]//2,y-text_size[1]//2,text_size[0]+20,text_size[1]+10),border_radius=border_radius)
+        if text_rect.collidepoint(pg.mouse.get_pos()):
+            text = font.render(button_text,True,foreground,hover_color)
+            text_rect = pg.draw.rect(self.window,hover_color,(x-text_size[0]//2+1,y-text_size[1]//2+1,text_size[0]+20,text_size[1]+10),border_radius=border_radius)
+        else:
+            text_rect = pg.draw.rect(self.window,background,(x-text_size[0]//2,y-text_size[1]//2,text_size[0]+20,text_size[1]+10),border_radius=border_radius)
         self.window.blit(text,(text_rect.x+10,text_rect.y+5))
         return text_rect
 
@@ -272,14 +255,36 @@ class Simulation:
             pg.draw.rect(self.window,inactive_color,input_rect)
         self.window.blit(text_surface,input_rect)
         return input_rect
-    # def sliderbutton(self,text,x,y,background,foreground,pos,font):
-        # text = font.render(text,True,foreground,background)
-        # text_size = text.get_size()
-        # text_rect = pg.draw.rect(self.window,background,(x,y,text_size[0]+20,text_size[1]+10))
-        # self.window.blit(text,(text_rect.x+10,text_rect.y+5))
 
-        # return pos
+    
+class Simulation(theme):
+    def __init__(self):
+        pg.init()
+        self.window = pg.display.set_mode((1360,720),pg.RESIZABLE)
+        self.size =self.window.get_size()
+        pg.display.set_caption("Pendulum simulation")    
+        super().__init__()
 
+        self.length1 = 200
+        self.lengtho1 = self.length1
+        self.length2 = 200
+        self.lengtho2 = self.length2
+        self.mass1 = 100
+        self.masso1 = self.mass1
+        self.mass2 = 100
+        self.masso2 = self.mass2
+        self.dampcoef = 0.0
+        self.dampcoefo =self.dampcoef
+        self.gravity = 980
+        self.gravityo = self.gravity
+        self.theta1 = 0.550
+        self.thetao1 = self.theta1
+        self.theta2 = 0.550
+        self.thetao2 = self.theta2
+        self.phi1 = 0.0
+        self.phio1 = self.phi1
+        self.phi2 = 0.0
+        self.phio2 = self.phi2
     
         
     def mainmenu(self):
@@ -407,7 +412,7 @@ class Simulation:
             for event in pg.event.get():
                 if event.type==pg.QUIT:
                     run = False
-                    break
+                    sys.exit()
 
                 if event.type==pg.KEYDOWN:
                     if active1:
@@ -488,6 +493,12 @@ class Simulation:
                         run = False
                         break
                     if two_pen_rect.collidepoint(event.pos):
+                        self.length1 = length1
+                        self.length2 = length2
+                        self.mass1 = mass1
+                        self.mass2 = mass2
+                        # self.dampcoef = dampcoef
+                        self.gravity = gravity
                         self.menuD2()
                     if run_rect.collidepoint(event.pos):
                         self.length1 = length1
@@ -574,22 +585,276 @@ class Simulation:
         clock = pg.time.Clock()
         self.size = self.window.get_size()
         back_button = self.back_button(self.size)
+        back_button = self.back_button(self.size)
+        heading_rect = self.button_with_shadow("Simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+        back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
+        reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
+        run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
+
+        theta11 = self.theta1
+        theta21 = self.theta2
+        phi11 = self.phi1
+        phi21 = self.phi2
+        theta12 = self.theta1
+        theta22 = self.theta2
+        phi12 = self.phi1
+        phi22 = self.phi2
+
+
+        
+        active1 = False
+        active2 = False
+        active3 = False
+        active4 = False
+        active5 = False
+        active6 = False
+        active7 = False
+        active8 = False
+
+        user_text1 = str(theta11)
+        user_text2 = str(theta21)
+        user_text3 = str(phi11)
+        user_text4 = str(phi21)
+        user_text5 = str(theta12)
+        user_text6 = str(theta22)
+        user_text7 = str(phi12)
+        user_text8 = str(phi22)
+
+
+        color_active = self.special
+        color_inactive = self.common
+
         while run:
             for event in pg.event.get():
                 if event.type==pg.QUIT:
                     run = False
-                    break
+                    sys.exit()
+                if event.type==pg.KEYDOWN:
+                    if active1:
+                        if event.key==pg.K_BACKSPACE:
+                            user_text1=user_text1[:-1]
+                        else:
+                            if event.key==pg.K_RETURN or event.key==pg.K_KP_ENTER:
+                                active1=False
+                                try:
+                                    theta11 = float(user_text1)
+                                except:
+                                    user_text1 = str(theta11)
+                            else:
+                                user_text1+=event.unicode
+                    elif active2:
+                        if event.key==pg.K_BACKSPACE:
+                            user_text2=user_text2[:-1]
+                        else:
+                            if event.key==pg.K_RETURN or event.key==pg.K_KP_ENTER:
+                                active2=False
+                                try:
+                                    theta21 = float(user_text2)
+                                except:
+                                    user_text2 = str(theta21)
+                            else:
+                                user_text2+=event.unicode
+
+                    elif active3:
+                        if event.key==pg.K_BACKSPACE:
+                            user_text3=user_text3[:-1]
+                        else:
+                            if event.key==pg.K_RETURN or event.key==pg.K_KP_ENTER:
+                                active3=False
+                                try:
+                                    phi11 = float(user_text3)
+                                except:
+                                    user_text3 = str(phi11)
+                            else:
+                                user_text3+=event.unicode
+
+                    elif active4:
+                        if event.key==pg.K_BACKSPACE:
+                            user_text4=user_text4[:-1]
+                        else:
+                            if event.key==pg.K_RETURN or event.key==pg.K_KP_ENTER:
+                                active4=False
+                                try:
+                                    phi21 = float(user_text4)
+                                except:
+                                    user_text4 = str(phi21)
+                            else:
+                                user_text4+=event.unicode
+                    elif active5:
+                        if event.key==pg.K_BACKSPACE:
+                            user_text5=user_text5[:-1]
+                        else:
+                            if event.key==pg.K_RETURN or event.key==pg.K_KP_ENTER:
+                                active5=False
+                                try:
+                                    theta12 = float(user_text5)
+                                except:
+                                    user_text5 = str(theta12)
+                            else:
+                                user_text5+=event.unicode
+                    elif active6:
+                        if event.key==pg.K_BACKSPACE:
+                            user_text6=user_text6[:-1]
+                        else:
+                            if event.key==pg.K_RETURN or event.key==pg.K_KP_ENTER:
+                                active6=False
+                                try:
+                                    theta22 = float(user_text6)
+                                except:
+                                    user_text6 = str(theta22)
+                            else:
+                                user_text6+=event.unicode
+
+                    elif active7:
+                        if event.key==pg.K_BACKSPACE:
+                            user_text7=user_text7[:-1]
+                        else:
+                            if event.key==pg.K_RETURN or event.key==pg.K_KP_ENTER:
+                                active7=False
+                                try:
+                                    phi12 = float(user_text7)
+                                except:
+                                    user_text7 = str(phi12)
+                            else:
+                                user_text7+=event.unicode
+
+                    elif active8:
+                        if event.key==pg.K_BACKSPACE:
+                            user_text8=user_text8[:-1]
+                        else:
+                            if event.key==pg.K_RETURN or event.key==pg.K_KP_ENTER:
+                                active8=False
+                                try:
+                                    phi22 = float(user_text8)
+                                except:
+                                    user_text8 = str(phi22)
+                            else:
+                                user_text8+=event.unicode
+                    else:
+                        user_text = "0.0"
                 if event.type==pg.MOUSEBUTTONDOWN:
+                    if input_rect1.collidepoint(event.pos):
+                        active1 = True
+                        active2 = False
+                        active3 = False
+                        active4 = False
+                        active5 = False
+                        active6 = False
+                        active7 = False
+                        active8 = False
+                    if input_rect2.collidepoint(event.pos):
+                        active1 = False
+                        active2 = True
+                        active3 = False
+                        active4 = False
+                        active5 = False
+                        active6 = False
+                        active7 = False
+                        active8 = False
+                    if input_rect3.collidepoint(event.pos):
+                        active1 = False
+                        active2 = False
+                        active3 = True
+                        active4 = False
+                        active5 = False
+                        active6 = False
+                        active7 = False
+                        active8 = False
+                    if input_rect4.collidepoint(event.pos):
+                        active1 = False
+                        active2 = False
+                        active3 = False
+                        active4 = True
+                        active5 = False
+                        active6 = False
+                        active7 = False
+                        active8 = False
+                    if input_rect5.collidepoint(event.pos):
+                        active1 = False
+                        active2 = False
+                        active3 = False
+                        active4 = False
+                        active5 = True
+                        active6 = False
+                        active7 = False
+                        active8 = False
+                    if input_rect6.collidepoint(event.pos):
+                        active1 = False
+                        active2 = False
+                        active3 = False
+                        active4 = False
+                        active5 = False
+                        active6 = True
+                        active7 = False
+                        active8 = False
+                    if input_rect7.collidepoint(event.pos):
+                        active1 = False
+                        active2 = False
+                        active3 = False
+                        active4 = False
+                        active5 = False
+                        active6 = False
+                        active7 = True
+                        active8 = False
+                    if input_rect8.collidepoint(event.pos):
+                        active1 = False
+                        active2 = False
+                        active3 = False
+                        active4 = False
+                        active5 = False
+                        active6 = False
+                        active7 = False
+                        active8 = True
                     if back_button.collidepoint(event.pos):
                         run = False
                         break
-            
-            clock.tick(60)
+                    if run_rect.collidepoint(event.pos):
+                        self.runD2(theta11,theta21,phi11,phi21,theta12,theta22,phi12,phi22)
+                    if back_rect.collidepoint(event.pos):
+                        run = False
+                        break
+                    if reset_rect.collidepoint(event.pos):
+                        theta11 = self.thetao1
+                        theta21 = self.thetao2
+                        phi11 = self.phio1
+                        phi21 = self.phio2
+                        theta12 = self.thetao1
+                        theta22 = self.thetao2
+                        phi12 = self.phio1
+                        phi22 = self.phio2
+                        
+                        user_text1 = str(theta11)
+                        user_text2 = str(theta21)
+                        user_text3 = str(phi11)
+                        user_text4 = str(phi21)
+                        user_text5 = str(theta12)
+                        user_text6 = str(theta22)
+                        user_text7 = str(phi12)
+                        user_text8 = str(phi22)
+                        
+            clock.tick(120)
             self.window.fill(self.bg)
             self.size =self.window.get_size()
-            self.text_left("under construction, well don't want to do it, bored ;(",self.size[0]//2-400,self.size[1]//2,self.bg,self.fg,self.ff2)
             back_button = self.back_button(self.size)
+            heading_rect = self.button_with_shadow("Simple pendulum",self.size[0]//2,100,self.special,self.fg,self.common,self.ff2)
+            back_rect = self.button_with_shadow("back",self.size[0]//2-200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
+            reset_rect = self.button_with_shadow("reset",self.size[0]//2,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
+            run_rect = self.button_with_shadow("run",self.size[0]//2+200,self.size[1]-100,self.special,self.fg,self.common,self.ff2)
+            # self.text_left("under construction, well don't want to do it, bored ;(",self.size[0]//2-400,self.size[1]//2,self.bg,self.fg,self.ff2)
+            back_button = self.back_button(self.size)
+
+            input_rect1 = self.inputbox("initial displacement 1 for first system= ",input_text=str(user_text1),x=100,y=180,maximum=200,activity=active1,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect2 = self.inputbox("initial displacement 2 for first system= ",input_text=str(user_text2),x=100,y=230,maximum=200,activity=active2,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect3 = self.inputbox("initial angular velocity 1 for first system= ",input_text=str(user_text3),x=100,y=280,maximum=200,activity=active3,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect4 = self.inputbox("initial angular velocity 2 for first system= ",input_text=str(user_text4),x=100,y=330,maximum=200,activity=active4,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+
+            input_rect5 = self.inputbox("initial displacement 1 for second system= ",input_text=str(user_text5),x=100,y=380,maximum=200,activity=active5,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect6 = self.inputbox("initial displacement 2 for second system= ",input_text=str(user_text6),x=100,y=430,maximum=200,activity=active6,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect7 = self.inputbox("initial angular velocity 1 for second system= ",input_text=str(user_text7),x=100,y=480,maximum=200,activity=active7,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+            input_rect8 = self.inputbox("initial angular velocity 2 for second system= ",input_text=str(user_text8),x=100,y=530,maximum=200,activity=active8,background=self.bg,foreground=self.fg,active_color=color_active,inactive_color=color_inactive,font=self.ff)
+
             pg.display.flip()
+            
     def menuS(self):
         run = True
         clock = pg.time.Clock()
@@ -642,6 +907,7 @@ class Simulation:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     run = False
+                    sys.exit()
                 
                 if event.type==pg.KEYDOWN:
                     if active1:
@@ -810,7 +1076,7 @@ class Simulation:
             for event in pg.event.get():
                 if event.type==pg.QUIT:
                     run = False
-                    break
+                    sys.exit()
 
                 if event.type==pg.KEYDOWN:
                     if active1:
@@ -1234,8 +1500,7 @@ class Simulation:
         run = True
         clock = pg.time.Clock()
         pen1 = DoublePendulum(self.mass1,self.mass2,self.length1,self.length2,self.dampcoef,self.gravity,theta11,theta21,phi11,phi21)
-        pen2 = DoublePendulum(self.mass1,self.mass2,self.length1,self.length2,self.dampcoef,self.gravity,theta12,theta22,phi12,phi22) 
-        
+        pen2 = DoublePendulum(self.mass1,self.mass2,self.length1,self.length2,self.dampcoef,self.gravity,theta12,theta22,phi12,phi22,image="bitmap2.png") 
         menu_button = self.button_with_shadow("menu",100,100,self.special,self.fg,self.common,self.ff2)
         # T,V,E = pen1.energy()
         # E0 = pen.initial_energy()
